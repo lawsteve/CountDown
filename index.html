@@ -328,14 +328,14 @@
 
     // ── Solver ─────────────────────────────────────────────────────────────
     function solve(numbers, tgt) {
-      let best = { diff: Infinity, steps: [], result: null };
+      let best = { diff: Infinity, expr: null, result: null };
 
-      function recurse(nums, acc) {
+      function recurse(nums) {
         // Check each current value
         for (const n of nums) {
           const diff = Math.abs(n.val - tgt);
           if (diff < best.diff) {
-            best = { diff, steps: [...acc], result: n.val };
+            best = { diff, expr: n.expr, result: n.val };
             if (diff === 0) return true;
           }
         }
@@ -345,20 +345,20 @@
         for (let i = 0; i < nums.length; i++) {
           for (let j = 0; j < nums.length; j++) {
             if (i === j) continue;
-            const a = nums[i].val;
-            const b = nums[j].val;
+            const a = nums[i];
+            const b = nums[j];
             const rest = nums.filter((_, k) => k !== i && k !== j);
 
             const ops = [];
-            if (i < j) ops.push({ sym: '+', val: a + b });             // commutative: one direction only
-            if (a > b)  ops.push({ sym: '−', val: a - b });             // result > 0
-            if (i < j) ops.push({ sym: '×', val: a * b });             // commutative: one direction only
-            if (b !== 0 && a % b === 0) ops.push({ sym: '÷', val: a / b }); // whole number
+            if (i < j) ops.push({ sym: '+', val: a.val + b.val });
+            if (a.val > b.val) ops.push({ sym: '−', val: a.val - b.val });
+            if (i < j) ops.push({ sym: '×', val: a.val * b.val });
+            if (b.val !== 0 && a.val % b.val === 0) ops.push({ sym: '÷', val: a.val / b.val });
 
             for (const { sym, val } of ops) {
               if (val > 0) {
-                const step = `${a} ${sym} ${b} = ${val}`;
-                if (recurse([...rest, { val }], [...acc, step])) return true;
+                const newExpr = `(${a.expr} ${sym} ${b.expr})`;
+                if (recurse([...rest, { val, expr: newExpr }])) return true;
               }
             }
           }
@@ -366,7 +366,7 @@
         return false;
       }
 
-      recurse(numbers.map(v => ({ val: v })), []);
+      recurse(numbers.map(v => ({ val: v, expr: String(v) })));
       return best;
     }
 
@@ -573,16 +573,23 @@
       const panel = document.getElementById('solution-panel');
       const stepsEl = document.getElementById('solution-steps');
 
-      if (!res.steps.length && res.result === null) {
+      if (res.result === null) {
         stepsEl.innerHTML = '<div class="solution-step" style="color:#aaa">No solution found.</div>';
       } else {
-        let html = res.steps.map(s => `<div class="solution-step">${s}</div>`).join('');
-        if (res.diff > 0) {
-          html += `<div class="solution-step" style="color:#aaa; font-size:0.9rem">
-            Closest achievable: ${res.result} (${res.diff} away from ${target})
-          </div>`;
+        // Strip unnecessary outermost brackets from the expression
+        let expr = res.expr;
+        if (expr.startsWith('(') && expr.endsWith(')')) {
+          expr = expr.slice(1, -1);
         }
-        stepsEl.innerHTML = html;
+
+        if (res.diff === 0) {
+          stepsEl.innerHTML = `<div class="solution-step" style="font-size:1.1rem">${expr} = ${target}</div>`;
+        } else {
+          stepsEl.innerHTML = `
+            <div class="solution-step" style="font-size:1.1rem">${expr} = ${res.result}</div>
+            <div class="solution-step" style="color:#aaa; font-size:0.9rem">Closest achievable: ${res.result} (${res.diff} away from ${target})</div>
+          `;
+        }
       }
 
       panel.classList.add('visible');
