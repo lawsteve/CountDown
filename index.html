@@ -238,6 +238,79 @@
       color: #aaa;
       line-height: 1.7;
     }
+
+    /* ── Custom game ── */
+    .custom-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      width: 100%;
+      max-width: 480px;
+      margin-top: 20px;
+    }
+    .custom-section .panel-label { margin-bottom: 12px; }
+    .custom-inputs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+    .custom-inputs input {
+      width: 60px;
+      height: 52px;
+      border-radius: 8px;
+      background: #1e1e36;
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 1.2rem;
+      font-weight: 700;
+      text-align: center;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .custom-inputs input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .custom-inputs input.invalid { border-color: var(--accent); }
+    .custom-target-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .custom-target-row label {
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+    }
+    .custom-target-row input {
+      width: 90px;
+      height: 48px;
+      border-radius: 8px;
+      background: #1e1e36;
+      border: 1px solid var(--border);
+      color: var(--gold);
+      font-size: 1.4rem;
+      font-weight: 900;
+      text-align: center;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .custom-target-row input:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    .custom-error {
+      color: var(--accent);
+      font-size: 0.82rem;
+      text-align: center;
+      min-height: 1.2em;
+      margin-bottom: 8px;
+    }
   </style>
 </head>
 <body>
@@ -298,6 +371,26 @@
     </div>
   </details>
 
+  <div class="custom-section">
+    <div class="panel-label">Custom Game — enter your own numbers</div>
+    <div class="custom-inputs">
+      <input type="number" id="cn0" min="1" max="999" placeholder="?" />
+      <input type="number" id="cn1" min="1" max="999" placeholder="?" />
+      <input type="number" id="cn2" min="1" max="999" placeholder="?" />
+      <input type="number" id="cn3" min="1" max="999" placeholder="?" />
+      <input type="number" id="cn4" min="1" max="999" placeholder="?" />
+      <input type="number" id="cn5" min="1" max="999" placeholder="?" />
+    </div>
+    <div class="custom-target-row">
+      <label>Target</label>
+      <input type="number" id="custom-target" min="101" max="999" placeholder="101–999" />
+    </div>
+    <div class="custom-error" id="custom-error"></div>
+    <div style="text-align:center">
+      <button class="btn btn-red" onclick="startCustomGame()">Play Custom Game</button>
+    </div>
+  </div>
+
   <script>
     // ── State ──────────────────────────────────────────────────────────────
     let target = 0;
@@ -308,6 +401,29 @@
     let steps = [];         // user's working lines
     let gameActive = false;
     let gameSolved = false;
+
+    // ── Custom game ────────────────────────────────────────────────────────
+    function startCustomGame() {
+      const errEl = document.getElementById('custom-error');
+      const nums = [];
+      for (let i = 0; i < 6; i++) {
+        const val = parseInt(document.getElementById(`cn${i}`).value);
+        if (isNaN(val) || val < 1 || val > 999) {
+          errEl.textContent = `Number ${i + 1} must be between 1 and 999.`;
+          document.getElementById(`cn${i}`).focus();
+          return;
+        }
+        nums.push(val);
+      }
+      const tgt = parseInt(document.getElementById('custom-target').value);
+      if (isNaN(tgt) || tgt < 101 || tgt > 999) {
+        errEl.textContent = 'Target must be between 101 and 999.';
+        document.getElementById('custom-target').focus();
+        return;
+      }
+      errEl.textContent = '';
+      startGame(nums, tgt);
+    }
 
     // ── Number generation ──────────────────────────────────────────────────
     function generateNumbers() {
@@ -418,8 +534,12 @@
 
     // ── Game logic ─────────────────────────────────────────────────────────
     function newGame() {
-      originalNumbers = generateNumbers();
-      target = Math.floor(Math.random() * 899) + 101;
+      startGame(generateNumbers(), Math.floor(Math.random() * 899) + 101);
+    }
+
+    function startGame(nums, tgt) {
+      originalNumbers = nums;
+      target = tgt;
       tiles = originalNumbers.map(v => ({ value: v, used: false, isResult: false }));
       selected = [null, null];
       history = [];
@@ -438,6 +558,9 @@
       renderTiles();
       renderSteps();
       updateOpBtns();
+
+      // Scroll up to the game
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function resetGame() {
